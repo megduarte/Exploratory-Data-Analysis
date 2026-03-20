@@ -1,0 +1,42 @@
+---
+title: "Assignment 1"
+author: "Meghan Duarte"
+date: "2026-03-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+
+```{r}
+Data <- read.csv('BirthsAndFertilityRatesAnnual.csv')
+Data
+filtered_data <- Data %>% filter(DataSeries %in% c("Total Fertility Rate (TFR)","Total Live-Births"))
+filtered_data
+
+#rownames(filtered_data)[rownames(filtered_data) == "Total Fertility Rate (TFR)"] <- "TFR"
+
+#filtered_data
+#rownames(filtered_data) <- c("TFD", "TLB")
+#filtered_data
+```
+
+```{r}
+ggplot(data = filtered_data, aes(x = "DataSeries")) + 
+  geom_boxplot()
+```
+
+```{r}
+filtered_data |> autoplot("Total Fertility Rate (TFR)")
+
+```
+
