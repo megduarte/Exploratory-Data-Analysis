@@ -10,3 +10,7 @@ Assignment description:
 - For the EDA, you should also discuss how you can assess which of your viable models is best for forecasting for the period from 2013 to 2024.
 - If you have literature references for time series modelling of TLB and TFR (whether in the Singapore context or other countries), include a short discussion on the literature, since the techniques in the literature may be relevant.
 - There could be social and economic issues that influence your decision to choose the final set of models to eventually include in your final report, rather than what statistical test and standard time series analysis methodology indicate. In this case, be prepared to justify your choice in the Final Report.
+
+Research:
+https://biblioasia.nlb.gov.sg/vol-18/issue-3/oct-dec-2022/family-planning-singapore/
+This article talks about the government family planning policies that started as early as 1949, and the changes it's gone through. They pushed heavily for having 2 or fewer children but in 1987 they shifted to a "Have three or more, if you can afford it" policy. According to this article, they are still struggling to increase family sizes. 
