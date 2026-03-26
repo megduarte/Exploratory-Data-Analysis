@@ -13,15 +13,21 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
+library(tsibble)
+library(feasts)
 ```
 
 
 
 ```{r}
-Data <- read.csv('BirthsAndFertilityRatesAnnual.csv')
-Data
-filtered_data <- Data %>% filter(DataSeries %in% c("Total Fertility Rate (TFR)","Total Live-Births"))
-filtered_data
+BAFRA <- read.csv('BirthsAndFertilityRatesAnnual.csv')
+# check the data with glimpse()
+BAFRA |>
+  glimpse()
+BAFRA
+# this code below is not good:
+#filtered_data <- Data %>% filter(DataSeries %in% c("Total Fertility Rate (TFR)","Total Live-Births"))
+#filtered_data
 
 #rownames(filtered_data)[rownames(filtered_data) == "Total Fertility Rate (TFR)"] <- "TFR"
 
@@ -30,13 +36,56 @@ filtered_data
 #filtered_data
 ```
 
-```{r}
-ggplot(data = filtered_data, aes(x = "DataSeries")) + 
-  geom_boxplot()
-```
+clean the data
+
+- filter the data so we just have TFR and TLB.
 
 ```{r}
-filtered_data |> autoplot("Total Fertility Rate (TFR)")
-
+clean_1 <- BAFRA |>
+  filter(DataSeries %in% c("Total Fertility Rate (TFR)", "Total Live-Births")) 
 ```
+
+- Having each individual year as a row is confusing. Let's kind of turn the data around so that the years are columns. 
+
+```{r}
+clean_2 <- pivot_longer(clean_1,
+                        cols = starts_with("X"),
+                        names_to = "Year",
+                        values_to = "Value",
+                        values_transform = list(Value = as.character))
+clean_2
+```
+
+- Let's get rid of the X in each year
+```{r}
+clean_3 <- mutate(clean_2, Year = str_remove(Year, "X"))
+clean_3
+```
+
+- Before, some Year values were <dbl> and some were <chr>. I transformed them all the characters to turn Year into a column, let's fix that now. Change Value to <dbl> too while we're at it.
+
+Google says to try:
+df <- df %>% mutate(column_name = as.numeric(column_name))
+
+
+```{r}
+clean_4 <- clean_3 |> mutate(Year = as.numeric(Year), Value = as.numeric(Value))
+clean_4
+```
+
+- Now, give TFR and TLB their own columns
+
+This code below tells R to look at DataSeries column and makes the values in their into their own columns. It uses the values from "Value" to fill up those columns.  
+```{r}
+clean_data <- clean_4 |>
+  pivot_wider(names_from = DataSeries, values_from = Value)
+clean_data
+```
+
+Okay, now we have a dataset we can work with!
+
+
+
+
+
 
