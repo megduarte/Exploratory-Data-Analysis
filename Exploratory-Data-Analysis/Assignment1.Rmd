@@ -84,7 +84,24 @@ clean_data
 
 Okay, now we have a dataset we can work with!
 
+Let's turn it into a tsibble now.
 
+```{r}
+singapore <- clean_data |>
+  as_tsibble(index = Year)
+singapore
+```
+
+Let's look at TFR
+
+```{r}
+singapore |> autoplot(`Total Fertility Rate (TFR)`)
+```
+
+Now let's look at TLB
+```{r}
+singapore |> autoplot(`Total Live-Births`)
+```
 
 
 
