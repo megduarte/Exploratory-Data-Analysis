@@ -103,6 +103,186 @@ Now let's look at TLB
 singapore |> autoplot(`Total Live-Births`)
 ```
 
+From looking at these plots we can see that the total live-births and total fertility rates drop significantly from 1960 until the late 1980s. From our research, we can see that this lines up well with the government family policies that pushed for smaller families until 1987 when the government switched to a big push for larger families. 
+
+Let's try running a Portmanteau test
+
+```{r}
+singapore |>
+  features(`Total Fertility Rate (TFR)`, portmanteau_tests)
+```
+
+```{r}
+singapore |>
+  features(`Total Live-Births`, portmanteau_tests)
+```
+
+The bp-pvalues for both TFR and TLB is much smaller than 0.05 so we reject the null hypothesis that the data is white noise. 
+
+# Fit a Simple Model
+
+```{r}
+singapore_lm <- singapore |> 
+  model(lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend()))
+
+linear_aug <- singapore_lm |> augment()
+linear_aug |>
+  autoplot(.resid) + labs(title = "Residuals for Linear Model")
+```
+
+Try it again
+
+```{r}
+singapore_quad <- singapore |> 
+  model(lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2)))
+
+quad_aug <- singapore_quad |> augment()
+quad_aug |>
+  autoplot(.resid) + labs(title = "Residuals for Quadratic Model")
+```
+
+mauna_model_cs <- mauna |> 
+  model(
+    lm_cs = TSLM(concentration ~ trend() + I(trend()^2) + I(trend()^3) + season()),
+  )
+
+```{r}
+singapore_cubic <- singapore |>
+  model(
+    lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2) + I(trend()^3)))
+cubic_aug <- singapore_cubic |> augment()
+cubic_aug |>
+  autoplot(.resid) + labs(title = "Residuals for Cubic Model")
+```
+
+Let's look at AICs of these 3 models
+
+```{r}
+singapore_cubic |> glance() |> select(.model, AIC, AICc, BIC)
+```
+
+```{r}
+singapore_quad |> glance() |> select(.model, AIC, AICc, BIC)
+```
+
+```{r}
+singapore_lm |> glance() |> select(.model, AIC, AICc, BIC)
+```
+
+let's look at their ACFs
+
+```{r}
+quad_aug |>
+  ACF(.resid) |>
+  autoplot() +
+  labs(title="ACF of Quadratic Model Residuals")
+```
+
+```{r}
+linear_aug |>
+  ACF(.resid) |>
+  autoplot() +
+  labs(title="ACF of Linear Model Residuals")
+```
+
+
+```{r}
+cubic_aug |>
+  ACF(.resid) |>
+  autoplot() +
+  labs(title="ACF of Linear Model Residuals")
+```
+
+```{r}
+singapore_models <- singapore |>
+  model(
+    lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend()),
+  lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2)),
+  lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2) + I(trend()^3))
+  )
+tidy(singapore_models)
+```
+
+not sure if this is useful.
+```{r}
+singapore |> gg_tsdisplay(plot_type = "spectrum")
+```
+
+We need better models. 
+
+We'll run a unit test like mentioned in the week 4 pre-prac reading. This will determine if differencing is required. 
+
+```{r}
+singapore |>
+  features(`Total Fertility Rate (TFR)`, unitroot_kpss)
+```
+
+The kpss is 0.01 which means the null hypothesis is rejected. The null hypothesis for kpss is that the data is stationary. This means that the TFR data is not stationary. 
+
+The unitroot_ndiffs() is the function that uses "a sequence of KPSS tests to determine the appropriate number of first differences" (Non seasonal ARIMA models)
+
+nsdiffs() determines how many seasonal differences are required. 
+
+```{r}
+singapore |>
+  features(`Total Fertility Rate (TFR)`, list(unitroot_ndiffs, unitroot_nsdiffs))
+```
+
+So, we need two differences, but no seasonal differences. 
+
+```{r}
+singapore |>
+  mutate(diff2_TFR = difference(`Total Fertility Rate (TFR)`, differences = 2)) |>
+  gg_tsdisplay(diff2_TFR, plot_type = "partial")
+
+```
+
+From the PACF, we see that there's two lags that sticks out past the blue line at the very start. 
+
+From our ndiffs unit test we know that we need 2 differences.
+
+From the ACF, we see that there's one lag that sticks out past the blue line at the very start. 
+
+using all three of these, we get pdq(2,2,1)
+
+```{r}
+singapore_arima_1 <- singapore |>
+  model(
+    Arima1 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(2,2,1))
+  )
+singapore_arima_1 |> gg_tsresiduals()
+```
+
+```{r}
+TFR_comparison <- singapore |>
+  model(
+    manual_221 = ARIMA(`Total Fertility Rate (TFR)` ~ pdq(2, 2, 1)),
+    auto_search = ARIMA(`Total Fertility Rate (TFR)`)
+  )
+
+TFR_comparison |> pivot_longer(everything(), names_to = "Model name", values_to = "Orders")
+```
+
+```{r}
+TFR_comparison |> report()
+```
+
+```{r}
+singapore_arima_2 <- singapore |>
+  model(
+    Arima2 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(0,2,1))
+  )
+singapore_arima_2 |> gg_tsresiduals()
+```
+
+So, the auto selecter told us to go with a simpler model, and the comparison shows that it has a lower AIC than the model I made. So the simpler model is better. This is the model with pdq(0,2,1). However, lag 11 and lag 13 on the acf plot still go outside of the blue lines. 
+
+
+
+
+
+
+
 
 
 
