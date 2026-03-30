@@ -2,7 +2,9 @@
 title: "Assignment 1"
 author: "Meghan Duarte"
 date: "2026-03-12"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -449,19 +451,63 @@ In the Statistical Methodology Forum today, we discussed training your model on 
 
 However, the residuals plot for both ARIMAs show that the data is mostly centered around zero, the histograms looks mostly normal (the TLB looks slightly right-skewed), and most of the lags stay within the bounds. As they currently are, these are the best models I have to predict the TFR and TLB for 2013-2024. 
 
+A potential research question might be:
+
+How can we statistically evaluate the Singaporean government family planning policies' effect on total live birth rate and total fertility rate?
 
 
+# Statistical Appendix
+
+From Forecasting: Principles and Practice, chapter 7.1, we see that the equation for a linear relationship
+between a forecast variable and a single predictor variable is 
+
+\begin{equation}
+Y_t = \beta_0 + \beta_1 x_t + \epsilon_t
+\end{equation}
+
+For a quadratic relationship it would be
+
+\begin{equation}
+Y_t = \beta_0 + \beta_1 x_t + \beta_2 x_t^2 +\epsilon_t
+\end{equation}
+
+For a cubic relationship it would be
+
+\begin{equation}
+Y_t = \beta_0 + \beta_1 x_t + \beta_2 x_t^2 +\beta_3 x_t^3 +\epsilon_t
+\end{equation}
+
+The ARIMA model can be written as 
+
+\begin{equation}
+\psi (B) (1-B)^d y_t = c + \theta (B) \epsilon
+\end{equation}
 
 
+The AIC can be written as
 
+\begin{equation}
+AIC = -2 \log (L) + 2(p+q+k+1)
+\end{equation}
 
+- Where L is the likelihood of the data
 
+- $k=1$ if $c \neq 1$ and $k=0$ if $c=0$
 
+The corrected AIC can be written as 
 
+\begin{equation}
+AICc = AIC + \frac{2(p+q+k+1)(p+q+k+2)}{T-p-q-k-2}
+\end{equation}
 
+The BIC can be written as 
 
+\begin{equation}
+BIC = AIC + [log(t)-2](p+q+k+1)
+\end{equation}
 
-
+- p = order of the autoregressive part
+- q = order of the moving average part
 
 
 
