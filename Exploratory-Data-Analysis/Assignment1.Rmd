@@ -9,12 +9,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
 library(tsibble)
 library(feasts)
+library(fable)
 ```
 
 
@@ -24,16 +25,6 @@ BAFRA <- read.csv('BirthsAndFertilityRatesAnnual.csv')
 # check the data with glimpse()
 BAFRA |>
   glimpse()
-BAFRA
-# this code below is not good:
-#filtered_data <- Data %>% filter(DataSeries %in% c("Total Fertility Rate (TFR)","Total Live-Births"))
-#filtered_data
-
-#rownames(filtered_data)[rownames(filtered_data) == "Total Fertility Rate (TFR)"] <- "TFR"
-
-#filtered_data
-#rownames(filtered_data) <- c("TFD", "TLB")
-#filtered_data
 ```
 
 clean the data
@@ -62,7 +53,7 @@ clean_3 <- mutate(clean_2, Year = str_remove(Year, "X"))
 clean_3
 ```
 
-- Before, some Year values were <dbl> and some were <chr>. I transformed them all the characters to turn Year into a column, let's fix that now. Change Value to <dbl> too while we're at it.
+- Before, some Year values were dbl and some were chr. I transformed them all to characters to turn Year into a column, let's fix that now. Change Value to dbl too while we're at it.
 
 Google says to try:
 df <- df %>% mutate(column_name = as.numeric(column_name))
@@ -75,7 +66,7 @@ clean_4
 
 - Now, give TFR and TLB their own columns
 
-This code below tells R to look at DataSeries column and makes the values in their into their own columns. It uses the values from "Value" to fill up those columns.  
+The code below tells R to look at DataSeries column and makes the values in there into their own columns (aka TFR and TLB get their own columns now). It uses the values from "Value" to fill up those columns.  
 ```{r}
 clean_data <- clean_4 |>
   pivot_wider(names_from = DataSeries, values_from = Value)
@@ -94,7 +85,7 @@ singapore
 
 Let's look at TFR
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 singapore |> autoplot(`Total Fertility Rate (TFR)`)
 ```
 
@@ -122,93 +113,129 @@ The bp-pvalues for both TFR and TLB is much smaller than 0.05 so we reject the n
 # Fit a Simple Model
 
 ```{r}
-singapore_lm <- singapore |> 
+linear_TFR <- singapore |> 
   model(lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend()))
 
-linear_aug <- singapore_lm |> augment()
-linear_aug |>
-  autoplot(.resid) + labs(title = "Residuals for Linear Model")
+linear_aug_tfr <- linear_TFR |> augment()
+linear_aug_tfr |>
+  autoplot(.resid) + labs(title = "Residuals for Linear TFR Model")
+```
+
+```{r}
+linear_TLB <- singapore |> 
+  model(lm_cs = TSLM(`Total Live-Births` ~ trend()))
+
+linear_aug_tlb <- linear_TLB |> augment()
+linear_aug_tlb |>
+  autoplot(.resid) + labs(title = "Residuals for Linear TLB Model")
 ```
 
 Try it again
 
 ```{r}
-singapore_quad <- singapore |> 
+quadratic_TFR <- singapore |> 
   model(lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2)))
 
-quad_aug <- singapore_quad |> augment()
-quad_aug |>
-  autoplot(.resid) + labs(title = "Residuals for Quadratic Model")
+quad_aug_tfr <- quadratic_TFR |> augment()
+quad_aug_tfr |>
+  autoplot(.resid) + labs(title = "Residuals for Quadratic TFR Model")
 ```
 
-mauna_model_cs <- mauna |> 
-  model(
-    lm_cs = TSLM(concentration ~ trend() + I(trend()^2) + I(trend()^3) + season()),
-  )
+```{r}
+quadratic_TLB <- singapore |> 
+  model(lm_cs = TSLM(`Total Live-Births` ~ trend() + I(trend()^2)))
+
+quad_aug_tlb <- quadratic_TLB |> augment()
+quad_aug_tlb |>
+  autoplot(.resid) + labs(title = "Residuals for Quadratic TLB Model")
+```
 
 ```{r}
-singapore_cubic <- singapore |>
+cubic_TFR <- singapore |>
   model(
     lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2) + I(trend()^3)))
-cubic_aug <- singapore_cubic |> augment()
-cubic_aug |>
-  autoplot(.resid) + labs(title = "Residuals for Cubic Model")
+cubic_aug_tfr <- cubic_TFR |> augment()
+cubic_aug_tfr |>
+  autoplot(.resid) + labs(title = "Residuals for Cubic TFR Model")
+```
+
+```{r}
+cubic_TLB <- singapore |>
+  model(
+    lm_cs = TSLM(`Total Live-Births` ~ trend() + I(trend()^2) + I(trend()^3)))
+cubic_aug_tlb <- cubic_TLB |> augment()
+cubic_aug_tlb |>
+  autoplot(.resid) + labs(title = "Residuals for Cubic TLB Model")
+```
+
+Let's try making it so we can see all the residual plots for TLB in one spot, and for TFR in another spot. 
+
+```{r}
+TFR_models <- singapore |>
+  model(
+    tfr_linear = TSLM(`Total Fertility Rate (TFR)` ~ trend()),
+  tfr_quad = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2)),
+  tfr_cubic = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2) + I(trend()^3))
+  )
+TFR_models |>
+  augment() |>
+  autoplot(.resid)+
+  facet_wrap(~ .model, ncol = 1)+
+  labs(title = "Residual Comparison for TFR")
+```
+
+```{r}
+TLB_models <- singapore |>
+  model(
+    tlb_linear = TSLM(`Total Live-Births` ~ trend()),
+  tlb_quad = TSLM(`Total Live-Births` ~ trend() + I(trend()^2)),
+  tlb_cubic = TSLM(`Total Live-Births` ~ trend() + I(trend()^2) + I(trend()^3))
+  )
+TLB_models |>
+  augment() |>
+  autoplot(.resid)+
+  facet_wrap(~ .model, ncol = 1)+
+  labs(title = "Residual Comparison for TLB")
 ```
 
 Let's look at AICs of these 3 models
 
 ```{r}
-singapore_cubic |> glance() |> select(.model, AIC, AICc, BIC)
+linear_TFR |> glance() |> select(.model, AIC, AICc, BIC)
+quadratic_TFR |> glance() |> select(.model, AIC, AICc, BIC)
+cubic_TFR |> glance() |> select(.model, AIC, AICc, BIC)
 ```
 
 ```{r}
-singapore_quad |> glance() |> select(.model, AIC, AICc, BIC)
+linear_TLB |> glance() |> select(.model, AIC, AICc, BIC)
+quadratic_TLB |> glance() |> select(.model, AIC, AICc, BIC)
+cubic_TLB |> glance() |> select(.model, AIC, AICc, BIC)
 ```
 
-```{r}
-singapore_lm |> glance() |> select(.model, AIC, AICc, BIC)
-```
+From the residuals plots and by comparing the AICs, we can see that for both TFR and TLB, the best model is the cubic model. 
 
 let's look at their ACFs
 
 ```{r}
-quad_aug |>
+TFR_models |>
+  augment()|>
   ACF(.resid) |>
   autoplot() +
-  labs(title="ACF of Quadratic Model Residuals")
+  facet_wrap(~ .model, ncol = 1)
 ```
 
 ```{r}
-linear_aug |>
+TLB_models |>
+  augment()|>
   ACF(.resid) |>
   autoplot() +
-  labs(title="ACF of Linear Model Residuals")
+  facet_wrap(~ .model, ncol = 1)
 ```
 
-
-```{r}
-cubic_aug |>
-  ACF(.resid) |>
-  autoplot() +
-  labs(title="ACF of Linear Model Residuals")
-```
-
-```{r}
-singapore_models <- singapore |>
-  model(
-    lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend()),
-  lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2)),
-  lm_cs = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2) + I(trend()^3))
-  )
-tidy(singapore_models)
-```
-
-not sure if this is useful.
-```{r}
-singapore |> gg_tsdisplay(plot_type = "spectrum")
-```
 
 We need better models. 
+
+# Arima Models 
 
 We'll run a unit test like mentioned in the week 4 pre-prac reading. This will determine if differencing is required. 
 
@@ -217,9 +244,15 @@ singapore |>
   features(`Total Fertility Rate (TFR)`, unitroot_kpss)
 ```
 
-The kpss is 0.01 which means the null hypothesis is rejected. The null hypothesis for kpss is that the data is stationary. This means that the TFR data is not stationary. 
+```{r}
+singapore |>
+  features(`Total Live-Births`, unitroot_kpss)
+```
 
-The unitroot_ndiffs() is the function that uses "a sequence of KPSS tests to determine the appropriate number of first differences" (Non seasonal ARIMA models)
+
+The kpss is 0.01 for both TFR and TLB. This means the null hypothesis is rejected. The null hypothesis for kpss is that the data is stationary. This means that the TFR and TLB data are not stationary. 
+
+The unitroot_ndiffs() is the function that uses "a sequence of KPSS tests to determine the appropriate number of first differences"-(Non seasonal ARIMA models)
 
 nsdiffs() determines how many seasonal differences are required. 
 
@@ -228,29 +261,61 @@ singapore |>
   features(`Total Fertility Rate (TFR)`, list(unitroot_ndiffs, unitroot_nsdiffs))
 ```
 
-So, we need two differences, but no seasonal differences. 
-
 ```{r}
+singapore |>
+  features(`Total Live-Births`, list(unitroot_ndiffs, unitroot_nsdiffs))
+```
+
+So, we need two differences, but no seasonal differences for TFR.
+
+We need one difference and no seasonal differences for TLB. 
+
+```{r, message=FALSE, warning=FALSE}
 singapore |>
   mutate(diff2_TFR = difference(`Total Fertility Rate (TFR)`, differences = 2)) |>
   gg_tsdisplay(diff2_TFR, plot_type = "partial")
-
 ```
 
-From the PACF, we see that there's two lags that sticks out past the blue line at the very start. 
+```{r, message=FALSE, warning=FALSE}
+singapore |>
+  mutate(diff1_TLB = difference(`Total Live-Births`, differences = 1)) |>
+  gg_tsdisplay(diff1_TLB, plot_type = "partial")
+```
 
-From our ndiffs unit test we know that we need 2 differences.
+For TFR: 
 
-From the ACF, we see that there's one lag that sticks out past the blue line at the very start. 
+- From the PACF, we see that there's two lags that sticks out past the blue line at the very start. 
 
-using all three of these, we get pdq(2,2,1)
+- From our ndiffs unit test we know that we need 2 differences.
 
-```{r}
-singapore_arima_1 <- singapore |>
+- From the ACF, we see that there's one lag that sticks out past the blue line at the very start. 
+
+- using all three of these, we get pdq(2,2,1)
+
+For TLB:
+
+- From the PACF, we see that there's no lag that sticks out past the blue line at the very start. 
+
+- From our ndiffs unit test we know that we need 1 difference.
+
+- From the ACF, we see that there's no lag that sticks out past the blue line at the very start. 
+
+- using all three of these, we get pdq(0,1,0)
+
+```{r, message=FALSE, warning=FALSE}
+TFR_ARIMA1 <- singapore |>
   model(
     Arima1 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(2,2,1))
   )
-singapore_arima_1 |> gg_tsresiduals()
+TFR_ARIMA1 |> gg_tsresiduals()
+```
+
+```{r, message=FALSE, warning=FALSE}
+TLB_ARIMA1 <- singapore |>
+  model(
+    Arima1 = ARIMA(`Total Live-Births`~0 + pdq(0,1,0))
+  )
+TLB_ARIMA1 |> gg_tsresiduals()
 ```
 
 ```{r}
@@ -263,19 +328,130 @@ TFR_comparison <- singapore |>
 TFR_comparison |> pivot_longer(everything(), names_to = "Model name", values_to = "Orders")
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 TFR_comparison |> report()
 ```
 
 ```{r}
-singapore_arima_2 <- singapore |>
+TLB_comparison <- singapore |>
+  model(
+    manual_221 = ARIMA(`Total Live-Births` ~ pdq(0, 1, 0)),
+    auto_search = ARIMA(`Total Live-Births`)
+  )
+
+TLB_comparison |> pivot_longer(everything(), names_to = "Model name", values_to = "Orders")
+```
+
+```{r, message=FALSE, warning=FALSE}
+TLB_comparison |> report()
+```
+
+So, we should make a different ARIMA for TFR, but we shouldn't for TLB.
+
+```{r}
+TFR_ARIMA2 <- singapore |>
   model(
     Arima2 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(0,2,1))
   )
-singapore_arima_2 |> gg_tsresiduals()
+TFR_ARIMA2 |> gg_tsresiduals()
 ```
 
-So, the auto selecter told us to go with a simpler model, and the comparison shows that it has a lower AIC than the model I made. So the simpler model is better. This is the model with pdq(0,2,1). However, lag 11 and lag 13 on the acf plot still go outside of the blue lines. 
+So, the auto selecter told us to go with a simpler model for TFR, and the comparison shows that it has a lower AIC than the model I made. So the simpler model is better. This is the model with pdq(0,2,1). However, lag 11 and lag 13 on the acf plot still go outside of the blue lines. 
+
+# Look at models for 1960-2012
+
+```{r}
+TFR_ARIMA2 <- singapore |>
+  filter(Year <= 2012) |>
+  model(
+    Arima2 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(0,2,1))
+  )
+TFR_ARIMA2 |> gg_tsresiduals()
+```
+
+```{r}
+TLB_ARIMA1<- singapore |>
+  filter(Year <= 2012) |>
+  model(
+    Arima1 = ARIMA(`Total Live-Births`~0 + pdq(0,1,0))
+  )
+TLB_ARIMA1 |> gg_tsresiduals()
+```
+
+```{r}
+singapore |>
+  filter(Year <= 2012) |>
+  model(
+    Arima2 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(0,2,1))
+  )|>
+  augment() |>
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = `Total Fertility Rate (TFR)`, colour = "Actual")) +
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+```
+
+```{r}
+singapore |>
+  filter(Year <= 2012) |>
+  model(
+    Arima1 = ARIMA(`Total Live-Births`~0 + pdq(0,1,0))
+  )|>
+  augment() |>
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = `Total Live-Births`, colour = "Actual")) +
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+```
+
+Compare these to the next best models, the cubic models.
+
+```{r}
+singapore |>
+  filter(Year <= 2012) |>
+  model(
+    tfr_cubic = TSLM(`Total Fertility Rate (TFR)` ~ trend() + I(trend()^2) + I(trend()^3))
+  )|>
+  augment() |>
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = `Total Fertility Rate (TFR)`, colour = "Actual")) +
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+```
+
+```{r}
+singapore |>
+  filter(Year <= 2012) |>
+  model(
+    tlb_cubic = TSLM(`Total Live-Births` ~ trend() + I(trend()^2) + I(trend()^3))
+  )|>
+  augment() |>
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = `Total Live-Births`, colour = "Actual")) +
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+```
+
+We can see that the ARIMA models the data much better for both TFR and TLB. 
+
+I worry about using the ARIMA models to predict data because they fit the current data so well. It's good at representing the known data, but would it be good at predicting future results? 
+
+In the Statistical Methodology Forum today, we discussed training your model on your data set minus a portion of it and then having your model predict the information you already know but your model doesn't, and then you can compare it to that. Perhaps I could look at doing this to my models in the future. 
+
+However, the residuals plot for both ARIMAs show that the data is mostly centered around zero, the histograms looks mostly normal (the TLB looks slightly right-skewed), and most of the lags stay within the bounds. As they currently are, these are the best models I have to predict the TFR and TLB for 2013-2024. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
