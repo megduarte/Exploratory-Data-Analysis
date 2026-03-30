@@ -510,7 +510,11 @@ BIC = AIC + [log(t)-2](p+q+k+1)
 - q = order of the moving average part
 
 
+# Github address 
 
+I hope this link works.
+
+https://github.com/megduarte/Exploratory-Data-Analysis
 
 
 
