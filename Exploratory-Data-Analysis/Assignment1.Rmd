@@ -27,7 +27,7 @@ BAFRA |>
   glimpse()
 ```
 
-clean the data
+# clean the data
 
 - filter the data so we just have TFR and TLB.
 
@@ -86,12 +86,14 @@ singapore
 Let's look at TFR
 
 ```{r, message=FALSE, warning=FALSE}
-singapore |> autoplot(`Total Fertility Rate (TFR)`)
+singapore |> autoplot(`Total Fertility Rate (TFR)`) +
+  labs(title = "TFR plot")
 ```
 
 Now let's look at TLB
 ```{r}
-singapore |> autoplot(`Total Live-Births`)
+singapore |> autoplot(`Total Live-Births`) +
+  labs(title = "TLB plot")
 ```
 
 From looking at these plots we can see that the total live-births and total fertility rates drop significantly from 1960 until the late 1980s. From our research, we can see that this lines up well with the government family policies that pushed for smaller families until 1987 when the government switched to a big push for larger families. 
@@ -200,7 +202,7 @@ TLB_models |>
 
 Let's look at AICs of these 3 models
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 linear_TFR |> glance() |> select(.model, AIC, AICc, BIC)
 quadratic_TFR |> glance() |> select(.model, AIC, AICc, BIC)
 cubic_TFR |> glance() |> select(.model, AIC, AICc, BIC)
@@ -216,12 +218,13 @@ From the residuals plots and by comparing the AICs, we can see that for both TFR
 
 let's look at their ACFs
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 TFR_models |>
   augment()|>
   ACF(.resid) |>
   autoplot() +
-  facet_wrap(~ .model, ncol = 1)
+  facet_wrap(~ .model, ncol = 1)+
+  labs(title = "TFR AICs Comparison for Linear, Quadratic, and Cubic Models")
 ```
 
 ```{r}
@@ -229,7 +232,8 @@ TLB_models |>
   augment()|>
   ACF(.resid) |>
   autoplot() +
-  facet_wrap(~ .model, ncol = 1)
+  facet_wrap(~ .model, ncol = 1)+
+  labs(title = "TLB AICs Comparison for Linear, Quadratic, and Cubic Models")
 ```
 
 
@@ -307,7 +311,8 @@ TFR_ARIMA1 <- singapore |>
   model(
     Arima1 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(2,2,1))
   )
-TFR_ARIMA1 |> gg_tsresiduals()
+TFR_ARIMA1 |> gg_tsresiduals()+
+  labs(title = "TFR ARIMA Plots")
 ```
 
 ```{r, message=FALSE, warning=FALSE}
@@ -315,7 +320,8 @@ TLB_ARIMA1 <- singapore |>
   model(
     Arima1 = ARIMA(`Total Live-Births`~0 + pdq(0,1,0))
   )
-TLB_ARIMA1 |> gg_tsresiduals()
+TLB_ARIMA1 |> gg_tsresiduals()+
+  labs(title = "TLB ARIMA Plots")
 ```
 
 ```{r}
@@ -353,7 +359,8 @@ TFR_ARIMA2 <- singapore |>
   model(
     Arima2 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(0,2,1))
   )
-TFR_ARIMA2 |> gg_tsresiduals()
+TFR_ARIMA2 |> gg_tsresiduals()+
+  labs(title = "TFR Auto ARIMA Plots")
 ```
 
 So, the auto selecter told us to go with a simpler model for TFR, and the comparison shows that it has a lower AIC than the model I made. So the simpler model is better. This is the model with pdq(0,2,1). However, lag 11 and lag 13 on the acf plot still go outside of the blue lines. 
@@ -366,7 +373,8 @@ TFR_ARIMA2 <- singapore |>
   model(
     Arima2 = ARIMA(`Total Fertility Rate (TFR)`~0 + pdq(0,2,1))
   )
-TFR_ARIMA2 |> gg_tsresiduals()
+TFR_ARIMA2 |> gg_tsresiduals()+
+  labs(title = "1960-2012 TFR ARIMA Plots")
 ```
 
 ```{r}
@@ -375,7 +383,8 @@ TLB_ARIMA1<- singapore |>
   model(
     Arima1 = ARIMA(`Total Live-Births`~0 + pdq(0,1,0))
   )
-TLB_ARIMA1 |> gg_tsresiduals()
+TLB_ARIMA1 |> gg_tsresiduals() +
+  labs(title = "1960-2012 TLB ARIMA Plots")
 ```
 
 ```{r}
@@ -387,7 +396,8 @@ singapore |>
   augment() |>
   ggplot(aes(x = Year)) +
   geom_line(aes(y = `Total Fertility Rate (TFR)`, colour = "Actual")) +
-  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed") +
+  labs(title = "1960-2012 TFR: Actual vs ARIMA Model")
 ```
 
 ```{r}
@@ -399,7 +409,8 @@ singapore |>
   augment() |>
   ggplot(aes(x = Year)) +
   geom_line(aes(y = `Total Live-Births`, colour = "Actual")) +
-  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed") +
+  labs(title = "1960-2012 TLB: Actual vs ARIMA Model")
 ```
 
 Compare these to the next best models, the cubic models.
@@ -413,7 +424,8 @@ singapore |>
   augment() |>
   ggplot(aes(x = Year)) +
   geom_line(aes(y = `Total Fertility Rate (TFR)`, colour = "Actual")) +
-  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed") +
+  labs(title = "1960-2012 TFR: Actual vs Cubic Model")
 ```
 
 ```{r}
@@ -425,7 +437,8 @@ singapore |>
   augment() |>
   ggplot(aes(x = Year)) +
   geom_line(aes(y = `Total Live-Births`, colour = "Actual")) +
-  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed")
+  geom_line(aes(y = .fitted, colour = "Fitted"), linetype = "dashed") +
+  labs(title = "1960-2012 TLB: Actual vs Cubic Model")
 ```
 
 We can see that the ARIMA models the data much better for both TFR and TLB. 
